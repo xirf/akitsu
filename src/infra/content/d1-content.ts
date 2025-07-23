@@ -1,20 +1,13 @@
+import { ContentFx, ContentQueryFilters } from '../../features/content';
 import { ContentModel, ContentItem, ContentQuery } from '../../shared/types/content';
-import { ContentRepository } from '../../features/content/content.service';
 
-export class D1ContentRepository implements ContentRepository {
+export class D1ContentRepository implements ContentFx {
   constructor(private db: D1Database) {}
 
-  async createModel(model: Omit<ContentModel, 'id' | 'createdAt' | 'updatedAt'>): Promise<ContentModel> {
-    const id = crypto.randomUUID();
+  async createContentModel(model: ContentModel): Promise<void> {
+    const id = model.id || crypto.randomUUID();
     const now = new Date().toISOString();
     
-    const fullModel: ContentModel = {
-      ...model,
-      id,
-      createdAt: now,
-      updatedAt: now
-    };
-
     await this.db.prepare(`
       INSERT INTO content_models (id, name, slug, display_name, description, fields, settings, created_at, updated_at, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -28,17 +21,14 @@ export class D1ContentRepository implements ContentRepository {
       JSON.stringify(model.settings),
       now,
       now,
-      'system' // TODO: Get from context
+      'system'
     ).run();
-
-    return fullModel;
   }
 
-  async getModel(slugOrId: string): Promise<ContentModel | null> {
+  async findContentModelBySlug(slug: string): Promise<ContentModel | null> {
     const result = await this.db.prepare(`
-      SELECT * FROM content_models 
-      WHERE slug = ? OR id = ?
-    `).bind(slugOrId, slugOrId).first();
+      SELECT * FROM content_models WHERE slug = ?
+    `).bind(slug).first();
 
     if (!result) return null;
 
@@ -55,7 +45,27 @@ export class D1ContentRepository implements ContentRepository {
     };
   }
 
-  async listModels(): Promise<ContentModel[]> {
+  async findContentModelById(id: string): Promise<ContentModel | null> {
+    const result = await this.db.prepare(`
+      SELECT * FROM content_models WHERE id = ?
+    `).bind(id).first();
+
+    if (!result) return null;
+
+    return {
+      id: result.id as string,
+      name: result.name as string,
+      slug: result.slug as string,
+      displayName: result.display_name as string,
+      description: result.description as string || undefined,
+      fields: JSON.parse(result.fields as string),
+      settings: JSON.parse(result.settings as string),
+      createdAt: result.created_at as string,
+      updatedAt: result.updated_at as string
+    };
+  }
+
+  async listContentModels(): Promise<ContentModel[]> {
     const results = await this.db.prepare(`
       SELECT * FROM content_models ORDER BY created_at DESC
     `).all();
@@ -75,10 +85,8 @@ export class D1ContentRepository implements ContentRepository {
     }));
   }
 
-  async updateModel(id: string, updates: Partial<ContentModel>): Promise<ContentModel> {
+  async updateContentModel(id: string, updates: Partial<ContentModel>): Promise<void> {
     const now = new Date().toISOString();
-    
-    // Build dynamic update query
     const setClause: string[] = [];
     const values: any[] = [];
     
@@ -94,27 +102,15 @@ export class D1ContentRepository implements ContentRepository {
     await this.db.prepare(`
       UPDATE content_models SET ${setClause.join(', ')} WHERE id = ?
     `).bind(...values).run();
-
-    const updated = await this.getModel(id);
-    if (!updated) throw new Error('Model not found after update');
-    return updated;
   }
 
-  async deleteModel(id: string): Promise<void> {
+  async deleteContentModel(id: string): Promise<void> {
     await this.db.prepare('DELETE FROM content_models WHERE id = ?').bind(id).run();
   }
 
-  async createItem(item: Omit<ContentItem, 'id' | 'createdAt' | 'updatedAt' | 'version'>): Promise<ContentItem> {
-    const id = crypto.randomUUID();
+  async createContentItem(item: ContentItem): Promise<void> {
+    const id = item.id || crypto.randomUUID();
     const now = new Date().toISOString();
-    
-    const fullItem: ContentItem = {
-      ...item,
-      id,
-      version: 1,
-      createdAt: now,
-      updatedAt: now
-    };
 
     await this.db.prepare(`
       INSERT INTO content_items (id, model_id, model_slug, slug, status, data, published_at, version, author_id, created_at, updated_at)
@@ -127,24 +123,21 @@ export class D1ContentRepository implements ContentRepository {
       item.status,
       JSON.stringify(item.data),
       item.publishedAt || null,
-      1,
+      item.version || 1,
       item.authorId,
-      now,
-      now
+      item.createdAt || now,
+      item.updatedAt || now
     ).run();
-
-    return fullItem;
   }
 
-  async getItem(modelSlug: string, slugOrId: string, populate?: string[]): Promise<ContentItem | null> {
+  async findContentItemBySlug(modelSlug: string, slug: string): Promise<ContentItem | null> {
     const result = await this.db.prepare(`
-      SELECT * FROM content_items 
-      WHERE model_slug = ? AND (slug = ? OR id = ?)
-    `).bind(modelSlug, slugOrId, slugOrId).first();
+      SELECT * FROM content_items WHERE model_slug = ? AND slug = ?
+    `).bind(modelSlug, slug).first();
 
     if (!result) return null;
 
-    const item: ContentItem = {
+    return {
       id: result.id as string,
       modelId: result.model_id as string,
       modelSlug: result.model_slug as string,
@@ -157,59 +150,60 @@ export class D1ContentRepository implements ContentRepository {
       createdAt: result.created_at as string,
       updatedAt: result.updated_at as string
     };
-
-    // TODO: Implement population of reference fields
-    if (populate?.length) {
-      // This would require additional queries to resolve references
-    }
-
-    return item;
   }
 
-  async listItems(query: ContentQuery): Promise<{ items: ContentItem[]; total: number }> {
-    let sql = 'SELECT * FROM content_items WHERE 1=1';
-    const values: any[] = [];
+  async findContentItemById(id: string): Promise<ContentItem | null> {
+    const result = await this.db.prepare(`
+      SELECT * FROM content_items WHERE id = ?
+    `).bind(id).first();
 
-    if (query.model) {
-      sql += ' AND model_slug = ?';
-      values.push(query.model);
-    }
+    if (!result) return null;
 
-    if (query.status) {
+    return {
+      id: result.id as string,
+      modelId: result.model_id as string,
+      modelSlug: result.model_slug as string,
+      slug: result.slug as string || undefined,
+      status: result.status as ContentItem['status'],
+      data: JSON.parse(result.data as string),
+      publishedAt: result.published_at as string || undefined,
+      version: result.version as number,
+      authorId: result.author_id as string,
+      createdAt: result.created_at as string,
+      updatedAt: result.updated_at as string
+    };
+  }
+
+  async findContentItemsByModel(modelSlug: string, filters?: ContentQueryFilters): Promise<{ items: ContentItem[]; total: number; }> {
+    let sql = 'SELECT * FROM content_items WHERE model_slug = ?';
+    let countSql = 'SELECT COUNT(*) as total FROM content_items WHERE model_slug = ?';
+    const values: any[] = [modelSlug];
+    const countValues: any[] = [modelSlug];
+
+    if (filters?.status) {
       sql += ' AND status = ?';
-      values.push(query.status);
+      countSql += ' AND status = ?';
+      values.push(filters.status);
+      countValues.push(filters.status);
     }
 
-    // TODO: Implement filters, sorting, pagination
+    sql += ` ORDER BY ${filters?.sortBy || 'created_at'} ${filters?.sortOrder || 'DESC'}`;
     
-    sql += ` ORDER BY ${query.sortBy || 'created_at'} ${query.sortOrder || 'DESC'}`;
-    
-    if (query.limit) {
+    if (filters?.limit) {
       sql += ' LIMIT ?';
-      values.push(query.limit);
+      values.push(filters.limit);
       
-      if (query.offset) {
+      if (filters?.offset) {
         sql += ' OFFSET ?';
-        values.push(query.offset);
+        values.push(filters.offset);
       }
     }
 
-    const results = await this.db.prepare(sql).bind(...values).all();
-    
-    // Get total count
-    let countSql = 'SELECT COUNT(*) as total FROM content_items WHERE 1=1';
-    const countValues: any[] = [];
-    
-    if (query.model) {
-      countSql += ' AND model_slug = ?';
-      countValues.push(query.model);
-    }
-    if (query.status) {
-      countSql += ' AND status = ?';
-      countValues.push(query.status);
-    }
-    
-    const countResult = await this.db.prepare(countSql).bind(...countValues).first();
+    const [results, countResult] = await Promise.all([
+      this.db.prepare(sql).bind(...values).all(),
+      this.db.prepare(countSql).bind(...countValues).first()
+    ]);
+
     const total = (countResult?.total as number) || 0;
 
     if (!results.results) return { items: [], total };
@@ -231,10 +225,8 @@ export class D1ContentRepository implements ContentRepository {
     return { items, total };
   }
 
-  async updateItem(id: string, updates: Partial<ContentItem>): Promise<ContentItem> {
+  async updateContentItem(id: string, updates: Partial<ContentItem>): Promise<void> {
     const now = new Date().toISOString();
-    
-    // Build dynamic update query
     const setClause: string[] = [];
     const values: any[] = [];
     
@@ -249,36 +241,43 @@ export class D1ContentRepository implements ContentRepository {
     await this.db.prepare(`
       UPDATE content_items SET ${setClause.join(', ')} WHERE id = ?
     `).bind(...values).run();
-
-    const updated = await this.db.prepare('SELECT * FROM content_items WHERE id = ?').bind(id).first();
-    if (!updated) throw new Error('Item not found after update');
-
-    return {
-      id: updated.id as string,
-      modelId: updated.model_id as string,
-      modelSlug: updated.model_slug as string,
-      slug: updated.slug as string || undefined,
-      status: updated.status as ContentItem['status'],
-      data: JSON.parse(updated.data as string),
-      publishedAt: updated.published_at as string || undefined,
-      version: updated.version as number,
-      authorId: updated.author_id as string,
-      createdAt: updated.created_at as string,
-      updatedAt: updated.updated_at as string
-    };
   }
 
-  async deleteItem(id: string): Promise<void> {
+  async deleteContentItem(id: string): Promise<void> {
     await this.db.prepare('DELETE FROM content_items WHERE id = ?').bind(id).run();
   }
 
-  async validateItemData(model: ContentModel, data: Record<string, any>): Promise<{ valid: boolean; errors: string[] }> {
+  async generateSlug(text: string, modelSlug: string): Promise<string> {
+    const baseSlug = text
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (true) {
+      const existing = await this.db.prepare(`
+        SELECT id FROM content_items WHERE model_slug = ? AND slug = ?
+      `).bind(modelSlug, slug).first();
+
+      if (!existing) break;
+      
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    return slug;
+  }
+
+  async validateContentData(model: ContentModel, data: Record<string, any>): Promise<{ valid: boolean; errors: string[]; }> {
     const errors: string[] = [];
 
     for (const field of model.fields) {
       const value = data[field.name];
 
-      // Check required fields
       if (field.validation?.required && (value === undefined || value === null || value === '')) {
         errors.push(`Field '${field.name}' is required`);
         continue;
@@ -286,7 +285,6 @@ export class D1ContentRepository implements ContentRepository {
 
       if (value === undefined || value === null) continue;
 
-      // Type-specific validation
       switch (field.type) {
         case 'email':
           if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
@@ -303,41 +301,14 @@ export class D1ContentRepository implements ContentRepository {
           break;
       }
 
-      // Length validation
-      if (field.validation?.min && value.length < field.validation.min) {
+      if (field.validation?.min && value.toString().length < field.validation.min) {
         errors.push(`Field '${field.name}' must be at least ${field.validation.min} characters`);
       }
-      if (field.validation?.max && value.length > field.validation.max) {
+      if (field.validation?.max && value.toString().length > field.validation.max) {
         errors.push(`Field '${field.name}' must be at most ${field.validation.max} characters`);
       }
     }
 
     return { valid: errors.length === 0, errors };
-  }
-
-  async generateSlug(text: string, modelSlug: string): Promise<string> {
-    const baseSlug = text
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/[\s_-]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-
-    let slug = baseSlug;
-    let counter = 1;
-
-    // Check for uniqueness
-    while (true) {
-      const existing = await this.db.prepare(`
-        SELECT id FROM content_items WHERE model_slug = ? AND slug = ?
-      `).bind(modelSlug, slug).first();
-
-      if (!existing) break;
-      
-      slug = `${baseSlug}-${counter}`;
-      counter++;
-    }
-
-    return slug;
   }
 }
