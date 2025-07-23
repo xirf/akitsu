@@ -31,6 +31,6 @@ export function setupMediaRoutes(app: OpenAPIHono, container: Container) {
 // Register the media routes
 registerRouteModule('media', {
   setup: setupMediaRoutes,
-  feature: 'media', // Only load if media feature is enabled
+  feature: 'media',
   priority: 30,
 });

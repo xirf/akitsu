@@ -11,9 +11,8 @@ name = "cms-serverless-prod"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "database_name"
-database_id = "database_id"
+database_name = "cms-db"
+database_id = "6ebc2e92-9be4-4238-9ddc-749afa09142e"
 
 [vars]
-JWT_SECRET = "your-jwt-secret-here"
 ENVIRONMENT = "development"

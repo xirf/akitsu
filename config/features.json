@@ -9,6 +9,16 @@
         "bcryptRounds": 12
       }
     },
+    "apikey": {
+      "enabled": true,
+      "version": "1.0.0",
+      "dependencies": ["auth"],
+      "config": {
+        "defaultRateLimit": 1000,
+        "keyLength": 32,
+        "keyPrefix": "cms_live_"
+      }
+    },
     "content": {
       "enabled": true,
       "version": "1.0.0",

@@ -16,6 +16,11 @@ export const FEATURES: Record<string, FeatureConfig> = {
     enabled: true, 
     version: '1.0.0' 
   },
+  apikey: {
+    enabled: true,
+    dependencies: ['auth'],
+    version: '1.0.0'
+  },
   content: { 
     enabled: true, 
     dependencies: ['auth'], 

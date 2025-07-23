@@ -6,6 +6,7 @@ import './routes/system.routes';
 import './routes/auth.routes';
 import './routes/content.routes';
 import './routes/media.routes';
+import './routes/apikey.routes';
 
 // Import route modules to trigger their registration
 

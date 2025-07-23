@@ -11,6 +11,18 @@ export interface User extends BaseEntity {
   isActive: boolean;
 }
 
+export interface ApiKey extends BaseEntity {
+  name: string;
+  keyHash: string;
+  permissions: ('read' | 'write' | 'admin')[];
+  rateLimit: number;
+  domains: string[];
+  expiresAt: string | null;
+  isActive: boolean;
+  userId: string;
+  lastUsedAt: string | null;
+}
+
 export interface AuthToken {
   token: string;
   expiresAt: number;
