@@ -1,3 +1,5 @@
+import { D1ContentRepository } from '../infra/content/d1-content';
+
 export interface AppEnv extends Record<string, any> {
   DB: D1Database;
   JWT_SECRET: string;
@@ -22,6 +24,10 @@ export class Container {
     this.register('database', this.env.DB);
     this.register('jwtSecret', this.env.JWT_SECRET);
     this.register('environment', this.env.ENVIRONMENT);
+    
+    // Register content services
+    const contentRepository = new D1ContentRepository(this.env.DB);
+    this.register('contentRepository', contentRepository);
   }
   
   register<T>(key: string, service: T): void {

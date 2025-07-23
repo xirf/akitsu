@@ -1,10 +1,20 @@
 import { z } from 'zod';
 import { createRoute } from '@hono/zod-openapi';
+import {
+    ApiResponseSchema,
+    ApiErrorResponseSchema,
+    IdParamSchema,
+    PermissionSchema,
+    TimestampSchema,
+    BearerAuthSecurity,
+    CommonErrorResponses,
+    createSuccessResponse
+} from '../../shared/schemas/common';
 
 // Input schemas
 export const CreateApiKeySchema = z.object({
     name: z.string().min(1, 'Name is required'),
-    permissions: z.array(z.enum(['read', 'write', 'admin'])).min(1, 'At least one permission required'),
+    permissions: z.array(PermissionSchema).min(1, 'At least one permission required'),
     rateLimit: z.number().min(1).max(10000).default(1000),
     domains: z.array(z.string().url()).optional(),
     expiresAt: z.string().optional()
@@ -12,7 +22,7 @@ export const CreateApiKeySchema = z.object({
 
 export const UpdateApiKeySchema = z.object({
     name: z.string().min(1).optional(),
-    permissions: z.array(z.enum(['read', 'write', 'admin'])).min(1).optional(),
+    permissions: z.array(PermissionSchema).min(1).optional(),
     rateLimit: z.number().min(1).max(10000).optional(),
     domains: z.array(z.string().url()).optional(),
     expiresAt: z.string().optional(),
@@ -24,40 +34,25 @@ export const ApiKeyResponseSchema = z.object({
     id: z.string(),
     name: z.string(),
     key: z.string().optional(), // Only shown on creation
-    permissions: z.array(z.enum(['read', 'write', 'admin'])),
+    permissions: z.array(PermissionSchema),
     rateLimit: z.number(),
     domains: z.array(z.string()),
     expiresAt: z.string().nullable(),
     isActive: z.boolean(),
     userId: z.string(),
-    createdAt: z.string(),
-    updatedAt: z.string(),
     lastUsedAt: z.string().nullable()
-});
+}).merge(TimestampSchema);
 
 export const ApiKeyListResponseSchema = z.object({
     id: z.string(),
     name: z.string(),
-    permissions: z.array(z.enum(['read', 'write', 'admin'])),
+    permissions: z.array(PermissionSchema),
     rateLimit: z.number(),
     domains: z.array(z.string()),
     expiresAt: z.string().nullable(),
     isActive: z.boolean(),
     createdAt: z.string(),
     lastUsedAt: z.string().nullable()
-});
-
-export const ApiResponseSchema = z.object({
-    success: z.boolean(),
-    data: z.unknown().optional(),
-    error: z.string().optional(),
-    message: z.string()
-});
-
-export const ApiErrorResponseSchema = z.object({
-    success: z.literal(false),
-    error: z.string(),
-    message: z.string()
 });
 
 // OpenAPI Route Definitions
@@ -67,7 +62,7 @@ export const createApiKeyRoute = createRoute({
     tags: ['Admin - API Keys'],
     summary: 'Create new API key',
     description: 'Create a new API key for accessing the CMS',
-    security: [{ Bearer: [] }],
+    security: BearerAuthSecurity,
     request: {
         body: {
             content: {
@@ -81,37 +76,12 @@ export const createApiKeyRoute = createRoute({
         201: {
             content: {
                 'application/json': {
-                    schema: ApiResponseSchema.extend({
-                        data: ApiKeyResponseSchema
-                    }),
+                    schema: createSuccessResponse(ApiKeyResponseSchema),
                 },
             },
             description: 'API key created successfully',
         },
-        400: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'Validation error',
-        },
-        401: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'Authentication required',
-        },
-        403: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'Admin access required',
-        },
+        ...CommonErrorResponses,
     },
 });
 
@@ -121,26 +91,17 @@ export const listApiKeysRoute = createRoute({
     tags: ['Admin - API Keys'],
     summary: 'List API keys',
     description: 'Get all API keys for the current user',
-    security: [{ Bearer: [] }],
+    security: BearerAuthSecurity,
     responses: {
         200: {
             content: {
                 'application/json': {
-                    schema: ApiResponseSchema.extend({
-                        data: z.array(ApiKeyListResponseSchema)
-                    }),
+                    schema: createSuccessResponse(z.array(ApiKeyListResponseSchema)),
                 },
             },
             description: 'API keys retrieved successfully',
         },
-        401: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'Authentication required',
-        },
+        ...CommonErrorResponses,
     },
 });
 
@@ -150,39 +111,20 @@ export const getApiKeyRoute = createRoute({
     tags: ['Admin - API Keys'],
     summary: 'Get API key details',
     description: 'Get details of a specific API key',
-    security: [{ Bearer: [] }],
+    security: BearerAuthSecurity,
     request: {
-        params: z.object({
-            id: z.string(),
-        }),
+        params: IdParamSchema,
     },
     responses: {
         200: {
             content: {
                 'application/json': {
-                    schema: ApiResponseSchema.extend({
-                        data: ApiKeyListResponseSchema
-                    }),
+                    schema: createSuccessResponse(ApiKeyListResponseSchema),
                 },
             },
             description: 'API key retrieved successfully',
         },
-        404: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'API key not found',
-        },
-        401: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'Authentication required',
-        },
+        ...CommonErrorResponses,
     },
 });
 
@@ -192,11 +134,9 @@ export const updateApiKeyRoute = createRoute({
     tags: ['Admin - API Keys'],
     summary: 'Update API key',
     description: 'Update an existing API key',
-    security: [{ Bearer: [] }],
+    security: BearerAuthSecurity,
     request: {
-        params: z.object({
-            id: z.string(),
-        }),
+        params: IdParamSchema,
         body: {
             content: {
                 'application/json': {
@@ -209,29 +149,12 @@ export const updateApiKeyRoute = createRoute({
         200: {
             content: {
                 'application/json': {
-                    schema: ApiResponseSchema.extend({
-                        data: ApiKeyListResponseSchema
-                    }),
+                    schema: createSuccessResponse(ApiKeyListResponseSchema),
                 },
             },
             description: 'API key updated successfully',
         },
-        404: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'API key not found',
-        },
-        401: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'Authentication required',
-        },
+        ...CommonErrorResponses,
     },
 });
 
@@ -241,39 +164,20 @@ export const deleteApiKeyRoute = createRoute({
     tags: ['Admin - API Keys'],
     summary: 'Delete API key',
     description: 'Delete an existing API key',
-    security: [{ Bearer: [] }],
+    security: BearerAuthSecurity,
     request: {
-        params: z.object({
-            id: z.string(),
-        }),
+        params: IdParamSchema,
     },
     responses: {
         200: {
             content: {
                 'application/json': {
-                    schema: ApiResponseSchema.extend({
-                        data: z.optional(z.null())
-                    }),
+                    schema: createSuccessResponse(z.null()),
                 },
             },
             description: 'API key deleted successfully',
         },
-        404: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'API key not found',
-        },
-        401: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'Authentication required',
-        },
+        ...CommonErrorResponses,
     },
 });
 

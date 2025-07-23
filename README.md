@@ -1,36 +1,27 @@
-# Serverless Headless CMS
+# Akitsu Serverless CMS
 
-A modular, serverless headless CMS built with TypeScript, Hono, and Cloudflare Workers.
+The serverless CMS built for Cloudflare's edge network.
 
-## Architecture
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-F38020?style=flat&logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
+[![Hono](https://img.shields.io/badge/Hono-E36002?style=flat&logo=hono&logoColor=white)](https://hono.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This CMS follows a modular architecture that allows you to easily enable/disable features:
+## ✨ Features
 
-```
-src/
-├── features/           # Self-contained feature modules
-│   ├── auth/          # Authentication & authorization
-│   ├── content/       # Content management (TODO)
-│   └── media/         # Media management (TODO)
-├── io/                # Input/Output adapters
-│   ├── api/           # HTTP API routes
-│   │   ├── routes/    # Modular route definitions
-│   │   ├── base/      # Base route classes
-│   │   ├── registry.ts # Route registration system
-│   │   └── routeMap.ts # Main route setup
-│   └── cli/           # CLI commands (TODO)
-├── infra/             # Infrastructure adapters
-│   ├── auth/          # Auth providers (D1, JWT)
-│   └── database/      # Database adapters
-├── shared/            # Shared utilities & types
-├── composition/       # Feature composition & DI
-└── runtime/           # Application bootstrap
-```
+- 🔐 **Authentication & Authorization**: JWT-based auth with bcrypt password hashing
+- 🔑 **API Key Management**: Create and manage API keys with fine-grained permissions
+- 📄 **Content Management**: Flexible content models with dynamic field types
+- 🎯 **Type-Safe**: Full TypeScript support with Zod validation
+- 🏗️ **Modular Architecture**: Enable/disable features as needed
+- 📖 **OpenAPI Documentation**: Auto-generated API documentation
+- ⚡ **Serverless**: Built for Cloudflare Workers
+- 🗄️ **SQLite Database**: Cloudflare D1 for data persistence
 
 ## Features
 
 - ✅ **Authentication**: JWT-based auth with bcrypt password hashing
-- ⏳ **Content Management**: CRUD operations for content (planned)
+- ⏳ **Content Management**: CRUD operations for content (in progress)
 - ⏳ **Media Management**: File upload and management (planned)
 - ⏳ **Analytics**: Usage analytics (planned)
 
@@ -97,16 +88,36 @@ The API will be available at `http://localhost:8787`
 npm run deploy
 ```
 
-## API Endpoints
+## 📋 API Endpoints
 
 ### Health Check
 - `GET /health` - API health status
+- `GET /api/docs` - OpenAPI documentation
 
 ### Authentication
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
 - `POST /api/auth/refresh` - Refresh access token
 - `GET /api/auth/me` - Get current user info
+
+### API Keys (Admin)
+- `POST /api/admin/apikeys` - Create API key
+- `GET /api/admin/apikeys` - List API keys
+- `GET /api/admin/apikeys/{id}` - Get API key details
+- `PUT /api/admin/apikeys/{id}` - Update API key
+- `DELETE /api/admin/apikeys/{id}` - Delete API key
+
+### Content Management
+- `POST /api/content/models` - Create content model
+- `GET /api/content/models` - List content models
+- `GET /api/content/models/{slug}` - Get content model
+- `PUT /api/content/models/{slug}` - Update content model
+- `DELETE /api/content/models/{slug}` - Delete content model
+- `POST /api/content/{model}` - Create content item
+- `GET /api/content/{model}` - List content items
+- `GET /api/content/{model}/{slug}` - Get content item
+- `PUT /api/content/{model}/{slug}` - Update content item
+- `DELETE /api/content/{model}/{slug}` - Delete content item
 
 ### Example Usage
 
@@ -145,10 +156,38 @@ Features can be enabled/disabled in `src/composition/features.ts`:
 export const FEATURES: Record<string, FeatureConfig> = {
   auth: { enabled: true },
   content: { enabled: true, dependencies: ['auth'] },
+  apikey: { enabled: true, dependencies: ['auth'] },
   media: { enabled: false }, // Disabled
   analytics: { enabled: false } // Disabled
 };
 ```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🏗️ Project Status
+
+- ✅ Authentication & JWT
+- ✅ API Key Management  
+- ✅ Content Models
+- ✅ Content Items CRUD
+- ✅ OpenAPI Documentation
+- ⏳ Media Management
+- ⏳ File Upload
+- ⏳ Analytics
+- ⏳ Webhooks
+- ⏳ Multi-tenancy
+
+## 🙏 Acknowledgments
+
+- [Hono](https://hono.dev/) - Fast, lightweight web framework
+- [Cloudflare Workers](https://workers.cloudflare.com/) - Serverless platform
+- [Zod](https://zod.dev/) - TypeScript-first schema validation
 
 ## Project Structure Benefits
 

@@ -1,50 +1,51 @@
 import { success, z } from 'zod';
 import { createRoute } from '@hono/zod-openapi';
+import {
+    ApiResponseSchema,
+    ApiErrorResponseSchema,
+    EmailSchema,
+    PasswordSchema,
+    UserRoleSchema,
+    TimestampSchema,
+    BearerAuthSecurity,
+    CommonErrorResponses,
+    createSuccessResponse
+} from '../../shared/schemas/common';
 
 // Input schemas
 export const RegisterSchema = z.object({
-    email: z.string().email('Invalid email format'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    role: z.enum(['admin', 'editor', 'viewer']).default('viewer')
+    email: EmailSchema,
+    password: PasswordSchema,
+    role: UserRoleSchema.default('viewer')
 });
 
 export const LoginSchema = z.object({
-    email: z.string().email('Invalid email format'),
-    password: z.string().min(1, 'Password is required')
+    email: EmailSchema,
+    password: z.string()
+        .min(1, 'Password is required')
+        .max(128, 'Password too long')
 });
 
 export const RefreshTokenSchema = z.object({
-    refreshToken: z.string().min(1, 'Refresh token is required')
+    refreshToken: z.string()
+        .min(1, 'Refresh token is required')
+        .trim()
+        .max(1000, 'Refresh token too long')
 });
 
 // Output schemas
 export const UserResponseSchema = z.object({
     id: z.string(),
     email: z.string(),
-    role: z.enum(['admin', 'editor', 'viewer']),
-    isActive: z.boolean(),
-    createdAt: z.string(),
-    updatedAt: z.string()
-});
+    role: UserRoleSchema,
+    isActive: z.boolean()
+}).merge(TimestampSchema);
 
 export const AuthResponseSchema = z.object({
     user: UserResponseSchema,
     token: z.string(),
     refreshToken: z.string(),
     expiresAt: z.number()
-});
-
-export const ApiResponseSchema = z.object({
-    success: z.boolean(),
-    data: z.unknown().optional(), 
-    error: z.string().optional(),
-    message: z.string()
-});
-
-export const ApiErrorResponseSchema = z.object({
-    success: z.literal(false),
-    error: z.string(),
-    message: z.string()
 });
 
 // OpenAPI Route Definitions
@@ -67,20 +68,10 @@ export const registerRoute = createRoute({
         201: {
             content: {
                 'application/json': {
-                    schema: ApiResponseSchema.extend({
-                        data: AuthResponseSchema
-                    }),
+                    schema: createSuccessResponse(AuthResponseSchema),
                 },
             },
             description: 'User registered successfully',
-        },
-        400: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'Validation error',
         },
         409: {
             content: {
@@ -90,6 +81,7 @@ export const registerRoute = createRoute({
             },
             description: 'User already exists',
         },
+        ...CommonErrorResponses,
     },
 });
 
@@ -112,21 +104,12 @@ export const loginRoute = createRoute({
         200: {
             content: {
                 'application/json': {
-                    schema: ApiResponseSchema.extend({
-                        data: AuthResponseSchema
-                    }),
+                    schema: createSuccessResponse(AuthResponseSchema),
                 },
             },
             description: 'Login successful',
         },
-        401: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'Invalid credentials',
-        },
+        ...CommonErrorResponses,
     },
 });
 
@@ -149,21 +132,12 @@ export const refreshRoute = createRoute({
         200: {
             content: {
                 'application/json': {
-                    schema: ApiResponseSchema.extend({
-                        data: AuthResponseSchema
-                    }),
+                    schema: createSuccessResponse(AuthResponseSchema),
                 },
             },
             description: 'Token refreshed successfully',
         },
-        401: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'Invalid refresh token',
-        },
+        ...CommonErrorResponses,
     },
 });
 
@@ -173,32 +147,19 @@ export const meRoute = createRoute({
     tags: ['Authentication'],
     summary: 'Get current user',
     description: 'Get information about the currently authenticated user',
-    security: [
-        {
-            Bearer: [],
-        },
-    ],
+    security: BearerAuthSecurity,
     responses: {
         200: {
             content: {
                 'application/json': {
-                    schema: ApiResponseSchema.extend({
-                        data: z.object({
-                            user: UserResponseSchema
-                        })
-                    }),
+                    schema: createSuccessResponse(z.object({
+                        user: UserResponseSchema
+                    })),
                 },
             },
             description: 'User information retrieved successfully',
         },
-        401: {
-            content: {
-                'application/json': {
-                    schema: ApiErrorResponseSchema,
-                },
-            },
-            description: 'Authentication required',
-        },
+        ...CommonErrorResponses,
     },
 });
 

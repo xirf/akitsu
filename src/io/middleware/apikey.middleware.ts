@@ -26,6 +26,15 @@ export function createApiKeyMiddleware(
                 }, 401);
             }
 
+            // Validate API key format
+            if (apiKey.length < 10 || apiKey.length > 100) {
+                return c.json({
+                    success: false,
+                    error: 'Invalid API key format',
+                    message: 'API key format is invalid'
+                }, 401);
+            }
+
             // Skip if it's a JWT token (starts with 'eyJ')
             if (apiKey.startsWith('eyJ')) {
                 return await next();
@@ -51,15 +60,23 @@ export function createApiKeyMiddleware(
             if (checkDomain) {
                 const origin = c.req.header('Origin') || c.req.header('Referer');
                 if (origin) {
-                    const domain = new URL(origin).hostname;
-                    const isDomainAllowed = await apiKeyUnit.checkDomain(keyData, domain);
-                    
-                    if (!isDomainAllowed) {
+                    try {
+                        const domain = new URL(origin).hostname;
+                        const isDomainAllowed = await apiKeyUnit.checkDomain(keyData, domain);
+                        
+                        if (!isDomainAllowed) {
+                            return c.json({
+                                success: false,
+                                error: 'Domain not allowed',
+                                message: `Access from domain '${domain}' is not permitted`
+                            }, 403);
+                        }
+                    } catch (urlError) {
                         return c.json({
                             success: false,
-                            error: 'Domain not allowed',
-                            message: `Access from domain '${domain}' is not permitted`
-                        }, 403);
+                            error: 'Invalid origin',
+                            message: 'Invalid origin header'
+                        }, 400);
                     }
                 }
             }
@@ -70,10 +87,13 @@ export function createApiKeyMiddleware(
 
             return await next();
         } catch (error: any) {
+            // Log error for monitoring (but don't expose details)
+            console.error('API key middleware error:', error);
+            
             return c.json({
                 success: false,
                 error: 'Invalid API key',
-                message: error.message
+                message: 'The provided API key is invalid or has expired'
             }, 401);
         }
     };
