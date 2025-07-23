@@ -1,0 +1,19 @@
+name = "cms-serverless"
+main = "src/runtime/api.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat_v2"]
+
+[env.development]
+name = "cms-serverless-dev"
+
+[env.production]
+name = "cms-serverless-prod"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "database_name"
+database_id = "database_id"
+
+[vars]
+JWT_SECRET = "your-jwt-secret-here"
+ENVIRONMENT = "development"

@@ -1,0 +1,40 @@
+{
+  "features": {
+    "auth": {
+      "enabled": true,
+      "version": "1.0.0",
+      "config": {
+        "tokenExpiry": "1h",
+        "refreshTokenExpiry": "7d",
+        "bcryptRounds": 12
+      }
+    },
+    "content": {
+      "enabled": true,
+      "version": "1.0.0",
+      "dependencies": ["auth"],
+      "config": {
+        "maxContentSize": "5MB",
+        "allowedFormats": ["json", "markdown", "html"]
+      }
+    },
+    "media": {
+      "enabled": false,
+      "version": "1.0.0",
+      "dependencies": ["auth"],
+      "config": {
+        "maxFileSize": "50MB",
+        "allowedTypes": ["image/*", "video/*", "application/pdf"]
+      }
+    },
+    "analytics": {
+      "enabled": false,
+      "version": "1.0.0",
+      "dependencies": ["auth"],
+      "config": {
+        "retentionDays": 90,
+        "trackEvents": ["login", "content_create", "content_update"]
+      }
+    }
+  }
+}

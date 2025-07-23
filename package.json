@@ -1,0 +1,31 @@
+{
+  "name": "cms-serverless",
+  "version": "1.0.0",
+  "description": "Serverless Headless CMS with Cloudflare Workers",
+  "main": "src/runtime/api.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "tsc",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "db:migrate": "wrangler d1 migrations apply cms-db",
+    "db:generate": "wrangler d1 migrations create cms-db"
+  },
+  "dependencies": {
+    "@hono/zod-openapi": "^1.0.2",
+    "@scalar/hono-api-reference": "^0.9.12",
+    "bcryptjs": "^2.4.3",
+    "hono": "^4.8.5",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.5",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0",
+    "wrangler": "^4.25.1"
+  }
+}

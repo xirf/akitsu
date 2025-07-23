@@ -1,0 +1,4 @@
+JWT_SECRET=your-super-secret-jwt-key-here
+API_KEY=some-api-key
+DATABASE_ID=database_secret_id_here
+DATABASE_NAME=database_name

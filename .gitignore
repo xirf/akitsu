@@ -1,0 +1,45 @@
+# Wrangler secrets
+.dev.vars
+.env
+.env.local
+
+# Wrangler local state
+.wrangler/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# TypeScript
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+
+# Database files (local SQLite for testing)
+*.sqlite
+*.db
+
+# Cloudflare specific
+.cf/
